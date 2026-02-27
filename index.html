@@ -12,6 +12,7 @@
 <meta name="theme-color" content="#e91e8c">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
 
 :root {
   --bg:      #0f1117;
@@ -151,14 +152,16 @@ body { font-family: var(--ff-b); background: var(--bg); color: var(--text); }
 .cat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
 .cat-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
 .cat-btn {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 12px; padding: 14px 10px; cursor: pointer;
-  font-family: var(--ff-b); font-size: 13px; font-weight: 600; color: var(--text);
+  background: var(--card); border: 2px solid transparent;
+  border-radius: 14px; padding: 16px 10px; cursor: pointer;
+  font-family: var(--ff-b); font-size: 13px; font-weight: 700; color: var(--text);
   text-align: center; transition: all 0.12s;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
-.cat-btn:active { transform: scale(0.96); }
-.cat-btn.selected { border-color: var(--accent); background: rgba(94,227,163,0.1); color: var(--accent); }
-.cat-btn.sel-red  { border-color: var(--red);   background: rgba(255,107,107,0.1); color: var(--red); }
+.cat-btn i { font-size: 22px; }
+.cat-btn:active { transform: scale(0.95); }
+.cat-btn.selected { outline: 3px solid white; opacity: 1; }
+.cat-btn.sel-red  { outline: 3px solid white; opacity: 1; }
 
 .amount-box { display: flex; flex-direction: column; gap: 8px; }
 .amount-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
@@ -265,11 +268,19 @@ body { font-family: var(--ff-b); background: var(--bg); color: var(--text); }
 <script>
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-const INC_CATS = ['Nómina','Extra','Otros ingresos'];
-const EXP_CATS = ['Mercadona','Lidl','Mas','Otros','Netflix','Amazon'];
-
-const COLORS_INC = ['#5ee3a3','#6dd5fa','#a8ff78'];
-const COLORS_EXP = ['#ff6b6b','#ffd166','#f4a261','#e76f51','#ef476f','#06d6a0','#118ab2','#84a98c','#cdb4db','#a8dadc','#457b9d','#e9c46a','#f77f00','#d62828','#588157','#3a5a40','#6b7280'];
+const INC_CATS = [
+  { name: 'Nómina',         icon: 'fa-money-bill-wave', bg: '#1a6b3c', color: '#ffffff' },
+  { name: 'Extra',          icon: 'fa-circle-plus',     bg: '#2a5298', color: '#ffffff' },
+  { name: 'Otros ingresos', icon: 'fa-piggy-bank',      bg: '#6b4c9a', color: '#ffffff' },
+];
+const EXP_CATS = [
+  { name: 'Mercadona', icon: 'fa-store',            bg: '#00A650', color: '#ffffff' },
+  { name: 'Lidl',      icon: 'fa-basket-shopping',  bg: '#0050AA', color: '#FFD700' },
+  { name: 'Mas',       icon: 'fa-cart-shopping',    bg: '#E30613', color: '#ffffff' },
+  { name: 'Otros',     icon: 'fa-receipt',          bg: '#4a5568', color: '#ffffff' },
+  { name: 'Netflix',   icon: 'fa-tv',               bg: '#000000', color: '#E50914' },
+  { name: 'Amazon',    icon: 'fa-box',              bg: '#FF9900', color: '#000000' },
+];
 
 // ── ESTADO con guardado permanente ──
 const KEY = 'yasin_finanzas_v1';
@@ -368,14 +379,17 @@ function renderMonth() {
   list.innerHTML = moves.map((m, ri) => {
     const realIdx = S.months[S.cur].moves.length - 1 - ri;
     const isInc = m.type === 'income';
-    const color = isInc ? '#5ee3a3' : '#ff6b6b';
+    const allCats = [...INC_CATS, ...EXP_CATS];
+    const catDef = allCats.find(c => c.name === m.cat);
+    const dotColor = catDef ? catDef.bg : (isInc ? '#5ee3a3' : '#ff6b6b');
+    const valColor = isInc ? '#5ee3a3' : '#ff6b6b';
     return `<div class="move-item">
       <div class="mi-left">
-        <div class="mi-dot" style="background:${color}"></div>
+        <div class="mi-dot" style="background:${dotColor}"></div>
         <div class="mi-name">${m.cat}</div>
       </div>
       <div style="display:flex;align-items:center">
-        <div class="mi-val" style="color:${color}">${isInc?'+':'−'}${fmt(m.val)}</div>
+        <div class="mi-val" style="color:${valColor}">${isInc?'+':'−'}${fmt(m.val)}</div>
         <button class="mi-del" onclick="delMove(${realIdx})">✕</button>
       </div>
     </div>`;
@@ -393,20 +407,20 @@ function openEntry(mode) {
   saveBtn.className = 'save-btn' + (mode === 'expense' ? ' red-btn' : '');
 
   const cats = mode === 'income' ? INC_CATS : EXP_CATS;
-  const colors = mode === 'income' ? COLORS_INC : COLORS_EXP;
-  const selClass = mode === 'income' ? 'selected' : 'sel-red';
   const grid = document.getElementById('cat-grid');
   grid.innerHTML = '';
-  cats.forEach((c, i) => {
+  cats.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'cat-btn';
-    btn.textContent = c;
+    btn.style.background = c.bg;
+    btn.style.color = c.color;
+    btn.innerHTML = `<i class="fa-solid ${c.icon}" style="color:${c.color}"></i>${c.name}`;
     btn.onclick = () => {
-      grid.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
-      btn.classList.add(selClass);
-      selectedCat = c;
+      grid.querySelectorAll('.cat-btn').forEach(b => b.style.outline = 'none');
+      btn.style.outline = '3px solid white';
+      selectedCat = c.name;
       const sc = document.getElementById('sel-concept');
-      sc.innerHTML = `Concepto seleccionado: <strong>${c}</strong>`;
+      sc.innerHTML = `Concepto: <strong>${c.name}</strong>`;
       sc.className = 'selected-concept visible';
       document.getElementById('amount-input').focus();
     };
