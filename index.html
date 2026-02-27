@@ -271,11 +271,33 @@ const EXP_CATS = ['Mercadona','Lidl','Mas','Otros','Netflix','Amazon'];
 const COLORS_INC = ['#5ee3a3','#6dd5fa','#a8ff78'];
 const COLORS_EXP = ['#ff6b6b','#ffd166','#f4a261','#e76f51','#ef476f','#06d6a0','#118ab2','#84a98c','#cdb4db','#a8dadc','#457b9d','#e9c46a','#f77f00','#d62828','#588157','#3a5a40','#6b7280'];
 
-// ── ESTADO ──
-const S = {
-  cur: new Date().getMonth(),
-  months: Object.fromEntries(Array.from({length:12},(_,i)=>[i,{moves:[]}]))
-};
+// ── ESTADO con guardado permanente ──
+const KEY = 'yasin_finanzas_v1';
+
+function initMonths() {
+  return Object.fromEntries(Array.from({length:12},(_,i)=>[i,{moves:[]}]));
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // asegurar que existen los 12 meses
+      for (let i = 0; i < 12; i++) {
+        if (!parsed.months[i]) parsed.months[i] = {moves:[]};
+      }
+      return parsed;
+    }
+  } catch(e) {}
+  return { cur: new Date().getMonth(), months: initMonths() };
+}
+
+function saveState() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {}
+}
+
+const S = loadState();
 
 let entryMode = 'expense'; // 'income' | 'expense'
 let selectedCat = null;
@@ -400,6 +422,7 @@ function saveEntry() {
   if (!val || val <= 0) { toast('Introduce un importe válido'); return; }
 
   S.months[S.cur].moves.push({ type: entryMode, cat: selectedCat, val });
+  saveState();
 
   // Reset form para siguiente entrada
   selectedCat = null;
@@ -414,6 +437,7 @@ function saveEntry() {
 
 function delMove(idx) {
   S.months[S.cur].moves.splice(idx, 1);
+  saveState();
   renderMonth();
   renderMain();
 }
